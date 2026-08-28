@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>风水智囊 · AI地理师 — 本地离线分析</title>
-<link rel="stylesheet" href="css/style.css?v=3.1">
+<link rel="stylesheet" href="css/style.css?v=3.2">
 </head>
 <body>
 <header class="topbar">
@@ -109,7 +109,7 @@
     <div id="mediaStats" class="stats-grid"></div>
 
     <h2>🔗 发现清单 · 三源交叉确认</h2>
-    <p class="hint">程序已按 105 条术语库匹配文字描述，并对照片/视频做了量化分析。请逐项确认该现象在照片/视频中是否可见——✅有证据 / ❌未见 / ⚠️与描述矛盾 / —未涉及。三源一致置信度最高。</p>
+    <p class="hint">程序已按 132 条术语库匹配文字描述，并对照片/视频做了量化分析。请逐项确认该现象在照片/视频中是否可见——✅有证据 / ❌未见 / ⚠️与描述矛盾 / —未涉及。三源一致置信度最高。</p>
     <div class="table-box"><table id="findTable"></table></div>
     <div class="row gap">
       <select id="addFindingSelect"></select>
@@ -126,7 +126,7 @@
   <section class="card hidden" id="step4">
     <h2>📜 环境综合分析报告</h2>
     <div class="row gap">
-      <button class="btn primary" id="btnDownload">⬇️ 下载 Markdown 报告</button>
+      <button class="btn primary" id="btnDownload">⬇️ 下载 Word 报告 (.docx)</button>
       <button class="btn" id="btnPrint">🖨️ 打印 / 存为 PDF</button>
       <button class="btn ghost" id="btnCopy">复制全文</button>
       <span class="hint" id="reportHint"></span>
@@ -145,13 +145,14 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script src="js/knowledge.js?v=3.1"></script>
-<script src="js/kb-extend.js?v=3.1"></script>
-<script src="js/text-analyzer.js?v=3.1"></script>
-<script src="js/media-analyzer.js?v=3.1"></script>
-<script src="js/validator.js?v=3.1"></script>
-<script src="js/report.js?v=3.1"></script>
-<script src="js/md-render.js?v=3.1"></script>
-<script src="js/app.js?v=3.1"></script>
+<script src="js/knowledge.js?v=3.3"></script>
+<script src="js/kb-extend.js?v=3.3"></script>
+<script src="js/text-analyzer.js?v=3.3"></script>
+<script src="js/media-analyzer.js?v=3.3"></script>
+<script src="js/validator.js?v=3.3"></script>
+<script src="js/report.js?v=3.3"></script>
+<script src="js/md-render.js?v=3.3"></script>
+<script src="js/docx-export.js?v=3.3"></script>
+<script src="js/app.js?v=3.3"></script>
 </body>
 </html>
