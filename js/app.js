@@ -425,14 +425,14 @@ const App = (() => {
   function downloadMD() {
     const now = new Date();
     const pad = (x) => String(x).padStart(2, "0");
-    const name = `风水环境分析报告-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.md`;
-    const blob = new Blob([state.reportMD || ""], { type: "text/markdown;charset=utf-8" });
+    const name = `风水环境分析报告-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.docx`;
+    const blob = DocxExport.build(state.reportMD || "");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = name;
     a.click();
     URL.revokeObjectURL(a.href);
-    toast("报告已下载：" + name);
+    toast("Word 报告已下载：" + name);
   }
 
   async function copyReport() {
