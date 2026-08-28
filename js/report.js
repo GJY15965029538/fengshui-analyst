@@ -33,12 +33,20 @@ const ReportGenerator = (() => {
     const L = [];
     const now = new Date();
     const b = state.basic;
+    // 理气预计算（宅卦/游年/流年飞星，供多个章节复用）
+    const sitKey = b.facing ? KB.facingToSit[b.facing] : null;
+    const ZG = sitKey ? Metaphysics.zhaiGua(sitKey) : null;
+    const ynMap = ZG ? KB.youNianMap(ZG.name) : null;
+    const ys = now.getFullYear();
+    const baseStar = Metaphysics.liuNianStar(ys);
+    const flyMap = KB.yearlyFlying(ys, baseStar);
+    const dirOrder = ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"];
 
     // ===== 头部 =====
     const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
     const seq = String(Math.floor(Math.random()*9000)+1000);
     L.push("# 📜 环境综合分析报告", "");
-    L.push(`> **报告编号**：FS-${dateStr}-${seq}　|　**版本**：V3.1`);
+    L.push(`> **报告编号**：FS-${dateStr}-${seq}　|　**版本**：V3.2`);
     L.push(`> **分析方式**：本地浏览器离线分析，数据未上传任何服务器`);
     L.push(`> **生成时间**：${now.toLocaleString("zh-CN")}`);
     L.push(`> **数据来源**：${state.text ? "文字描述" : "无文字"} + ${state.photos.length}张照片 + ${state.videos.length}段视频`);
@@ -50,6 +58,7 @@ const ReportGenerator = (() => {
     if (b.culture) adapt.push(KB.global.cultures.find(c => c.key === b.culture)?.name || "");
     if (adapt.some(Boolean)) L.push(`> **已自动适配**：${adapt.filter(Boolean).join(" / ")}`);
     if (b.buildingType) { const bt = KB.buildingTypes.find(x => x.code === b.buildingType); if (bt) L.push(`> **建筑类型**：${bt.code} ${bt.name}（分析重点：${bt.focus}）`); }
+    if (b.facing && ZG) L.push(`> **坐向确认**：坐${KB.facingNames[sitKey]}朝${KB.facingNames[b.facing]}（${KB.dirShan[sitKey]}山${KB.dirShan[b.facing]}向）/ ${ZG.name}宅（${ZG.group}）`);
     L.push("", "---", "");
 
     // ===== 综合环境评级 =====
@@ -154,16 +163,10 @@ const ReportGenerator = (() => {
     for (const row of info) L.push(`| ${row[0]} | ${row[1]} | ${row[2]} |`);
     L.push("");
 
-    // ===== 二~六：分类三段式 =====
-    const secDefs = [
-      ["luantou", "二、⛰️ 峦头与环境综合评估"],
-      ["sha", "三、⚡ 形煞综合检测"],
-      ["water", "四、🌊 水法分析"],
-      ["indoor", "六、🏠 室内布局评估"]
-    ];
-    for (const [key, title] of secDefs) {
+    // ===== 分类章节输出函数 =====
+    function emitSection(key, title) {
       const items = active.filter(f => sectionOf(f) === key);
-      if (!items.length) continue;
+      if (!items.length) return;
       L.push("---", "", `## ${title}`, "");
       if (key === "sha") {
         L.push("**已确认/倾向形煞**", "");
@@ -178,7 +181,7 @@ const ReportGenerator = (() => {
         i++;
         L.push(`**【综合判断${i}】${f.name}**　${riskName(f.risk)}`);
         L.push(`- 文字：${f.sources.text.state === "yes" ? `“${f.sources.text.evidence}”` : sym(f.sources.text.state)}`);
-        L.push(`- 照片：${f.sources.photo.state === "yes" ? f.sources.photo.evidence || "用户确认可见" : sym(f.sources.photo.state)}${f.sources.photo.evidence && f.sources.photo.state === "yes" ? "" : ""}`);
+        L.push(`- 照片：${f.sources.photo.state === "yes" ? f.sources.photo.evidence || "用户确认可见" : sym(f.sources.photo.state)}`);
         L.push(`- 视频：${f.sources.video.state === "yes" ? f.sources.video.evidence || "用户确认可见" : sym(f.sources.video.state)}`);
         L.push(`- ➡️ 结论：${f.note || ""}（${f.judgement.conclusion}，${CrossValidator.starsLabel(f.judgement.stars)}）`);
         if (f.judgement.action && f.judgement.action !== "正常输出") L.push(`- 系统提示：${f.judgement.action}`);
@@ -188,57 +191,119 @@ const ReportGenerator = (() => {
       }
     }
 
-    // ===== 五、理气 =====
+    // ===== 二、峦头 =====
+    emitSection("luantou", "二、⛰️ 峦头与环境综合评估");
+
+    // ===== 三、八宅理气方位吉凶详解 =====
     const liqiItems = active.filter(f => sectionOf(f) === "liqi");
     if (b.facing || liqiItems.length) {
-      L.push("---", "", "## 五、🧭 理气与方位分析", "");
-      if (b.facing) {
-        const sit = KB.facingToSit[b.facing];
-        L.push(`- 朝向：大门/阳台朝**${KB.facingNames[b.facing]}**，即**坐${KB.facingNames[sit]}朝${KB.facingNames[b.facing]}**`);
-        const zg = Metaphysics.zhaiGua(sit);
-        if (zg) L.push(`- 宅卦：**${zg.name}宅（${zg.group}）**`);
+      L.push("---", "", "## 三、🧭 八宅理气方位吉凶详解", "");
+      if (ZG) {
+        L.push(`**${ZG.name}宅（坐${KB.facingNames[sitKey]}朝${KB.facingNames[b.facing]}）游年歌：${KB.youNianSong[ZG.name]}**`, "");
+        L.push("| 方位 | 八卦 | 游年星 | 吉凶 | 布局建议 |");
+        L.push("|---|---|---|---|---|");
+        const lucky = [], unlucky = [];
+        for (const d of dirOrder) {
+          const star = ynMap[d];
+          const meta = KB.youNianMeta[star];
+          const gua = Object.keys(KB.guaToDir).find(k => KB.guaToDir[k] === d);
+          const tag = d === b.facing ? "（大门）" : d === sitKey ? "（坐山）" : "";
+          L.push(`| ${KB.dirCenterNames[d]}${tag} | ${gua} | ${star} | ${meta.luck} | ${meta.advice} |`);
+          if (meta.luck === "大吉") lucky.push(`${KB.dirCenterNames[d]}（${star}）`);
+          if (meta.luck === "大凶") unlucky.push(`${KB.dirCenterNames[d]}（${star}）`);
+        }
+        L.push("");
+        if (lucky.length || unlucky.length) {
+          L.push(`**核心结论**：本宅${lucky.length ? `的 **${lucky.join("、")}** 是最佳吉方` : ""}${lucky.length && unlucky.length ? "；" : ""}${unlucky.length ? `**${unlucky.join("、")}** 为大凶之方，需重点化解或避开` : ""}。`, "");
+        }
         if (b.hemisphere === "south") {
           L.push("- 🌍 **南半球修正已应用**：");
           for (const [k, v] of KB.global.southFix) L.push(`  - ${k}：${v}`);
-        }
-        const ys = now.getFullYear();
-        L.push(`- ${ys} 年流年入中飞星：**${KB.starNames[Metaphysics.liuNianStar(ys)]}**`);
-        if (state.people.length && zg) {
-          L.push("- 命宅匹配：见「八、人物配命」");
+          L.push("");
         }
       } else {
-        L.push("- 未提供朝向：按规则跳过理气排盘，仅做峦头形煞分析，标注“待补充”。可用手机指南针APP——站大门外、面朝门外读取方向。");
+        L.push("- 未提供朝向：按规则跳过八宅排盘，仅做峦头形煞分析。可用手机指南针APP——站大门外、面朝门外读取方向。", "");
       }
-      for (const f of liqiItems) L.push(`- ${f.name}：${f.sources.text.evidence || ""}（${f.judgement.conclusion} ${CrossValidator.starsLabel(f.judgement.stars)}）`);
-      L.push("");
+      for (const f of liqiItems) {
+        L.push(`**【理气判断】${f.name}**`);
+        L.push(`- 文字：${f.sources.text.state === "yes" ? `“${f.sources.text.evidence}”` : sym(f.sources.text.state)}`);
+        L.push(`- 结论：${f.note || ""}（${f.judgement.conclusion}，${CrossValidator.starsLabel(f.judgement.stars)}）`);
+        const q = quoteOf(f);
+        if (q) L.push(`- 📖 引用自《${q[0]}》：“${q[1]}”${classicExplain(q)}`);
+        L.push("");
+      }
     }
 
-    // ===== 七、时空维度 =====
-    if (b.moveYear || b.buildYear || b.facing) {
-      L.push("---", "", "## 七、⏰ 时空维度", "");
-      const ys = now.getFullYear();
-      L.push(`- 今年（${ys}）流年飞星：**${KB.starNames[Metaphysics.liuNianStar(ys)]}** 入中。`);
-      if (b.moveYear) L.push(`- 入住年份 ${b.moveYear}，已居住约 ${ys - b.moveYear} 年，环境适应期已过，可对照自检清单评估调整效果。`);
-      if (b.buildYear) L.push(`- 建造年份 ${b.buildYear}（房龄约 ${ys - b.buildYear} 年），房龄较长建议重点做结构安全检查（见科学维度）。`);
-      L.push("> 传统理气流派众多，飞星推演仅供参考（低置信度）。", "");
+    // ===== 四、形煞 / 五、水法 =====
+    emitSection("sha", "四、⚡ 形煞综合检测");
+    emitSection("water", "五、🌊 水法分析");
+
+    // ===== 六、流年飞星分析 =====
+    if (b.facing) {
+      L.push("---", "", `## 六、🎯 ${ys}年流年飞星分析`, "");
+      L.push(`**${ys}年：${KB.starNames[baseStar]}入中宫，顺布九宫。**`, "");
+      L.push("| 方位 | 流年飞星 | 星性 | 影响 | 化解/布局建议 |");
+      L.push("|---|---|---|---|---|");
+      for (const d of dirOrder) {
+        const sNum = flyMap[d];
+        const sm = KB.starMeta[sNum];
+        const tag = d === b.facing ? "（大门）" : d === sitKey ? "（坐山）" : "";
+        L.push(`| ${KB.dirCenterNames[d]}${tag} | ${KB.starNames[sNum]} | ${sm.nature} | ${sm.effect} | ${sm.advice} |`);
+      }
+      L.push(`| 中宫 | ${KB.starNames[flyMap.center]} | ${KB.starMeta[flyMap.center].nature} | ${KB.starMeta[flyMap.center].effect} | ${KB.starMeta[flyMap.center].advice} |`);
+      L.push("", `**${ys}年三大重点**`, "");
+      const huang5 = dirOrder.find(d => flyMap[d] === 5);
+      const bi3 = dirOrder.find(d => flyMap[d] === 3);
+      const bai8 = dirOrder.find(d => flyMap[d] === 8);
+      L.push(`1. ⚠️ **五黄大煞到${KB.dirCenterNames[huang5]}**：今年最凶方位，忌动土装修、忌放红色黄色物品、宜静不宜动${b.facing === huang5 ? "。⚠️ 大门正在此方，化解优先级最高" : ""}。可在该方挂铜铃/六帝钱以金泄土。`);
+      L.push(`2. ⚠️ **三碧是非到${KB.dirCenterNames[bi3]}**：易招口舌是非、小人纠纷${b.facing === bi3 ? "，大门正在此方，出入频繁者影响最大" : ""}。建议放红色地垫/红绳以火泄木。`);
+      L.push(`3. 💰 **八白正财到${KB.dirCenterNames[bai8]}**：今年正财位，可放聚宝盆、保险柜、绿植催财。`);
+      L.push("", `> 注意：流年飞星每年变化，来年方位会整体移动，以上仅为 ${ys} 年内的时效性建议（传统理气推演，低置信度）。`, "");
+      if (b.moveYear) L.push(`- 入住/启用年份 ${b.moveYear}，已使用约 ${ys - b.moveYear} 年，环境适应期已过。`);
+      if (b.buildYear) L.push(`- 建造年份 ${b.buildYear}（房龄约 ${ys - b.buildYear} 年），建议重点做结构安全检查（见科学维度）。`);
+      if (b.moveYear || b.buildYear) L.push("");
     }
+
+    // ===== 七、室内布局 =====
+    emitSection("indoor", "七、🏠 室内布局评估");
 
     // ===== 八、人物配命 =====
     if (state.people.length) {
-      L.push("---", "", "## 八、👤 人物配命", "");
-      const zg = b.facing ? Metaphysics.zhaiGua(KB.facingToSit[b.facing]) : null;
-      L.push("| 居住者 | 出生年份 | 命卦 | 命局 | 与本宅匹配 |");
+      L.push("---", "", "## 八、👤 人物配命分析", "");
+      L.push("| 成员 | 出生年份 | 命卦 | 命局 | 与本宅匹配 |");
       L.push("|---|---|---|---|---|");
       for (const p of state.people) {
         const mg = Metaphysics.mingGua(p.year, p.gender);
         let match = "待补充朝向";
-        if (zg) {
-          const same = (mg.group === "东四命") === (zg.group === "东四宅");
-          match = same ? `✅ 相配（${mg.group}配${zg.group}）` : `⚠️ 不相配（${mg.group}配${zg.group}，可在卧床/书桌方位上取本命吉方调节）`;
+        if (ZG) {
+          const same = (mg.group === "东四命") === (ZG.group === "东四宅");
+          match = same ? `✅ 相配（${mg.group}配${ZG.group}）` : `⚠️ 不相配（${mg.group}配${ZG.group}，可取本命吉方调节）`;
         }
         L.push(`| ${p.label || "成员"} | ${p.year} | ${mg.name} | ${mg.group} | ${match} |`);
       }
       L.push("", "> 📖 引用自《八宅明镜》：“东四命宜居东四宅，西四命宜居西四宅”——命卦与宅卦同组为配。", "");
+      // 宅命五行生克解读
+      if (ZG) {
+        const ze = KB.guaElement[ZG.name];
+        const GEN = { "木": "火", "火": "土", "土": "金", "金": "水", "水": "木" };
+        const KE = { "木": "土", "土": "水", "水": "火", "火": "金", "金": "木" };
+        for (const p of state.people) {
+          const mg = Metaphysics.mingGua(p.year, p.gender);
+          const me = KB.guaElement[mg.name];
+          let rel;
+          if (me === ze) rel = `比和（${me}与${ze}）——人与宅气场同气相合，和谐互助，宜保持`;
+          else if (GEN[me] === ze) rel = `我生宅（${me}生${ze}）——你为这个空间付出较多，但回报也丰厚，注意劳逸平衡`;
+          else if (GEN[ze] === me) rel = `宅生我（${ze}生${me}）——环境对你有天然助力，宜在吉方多活动`;
+          else if (KE[me] === ze) rel = `我克宅（${me}克${ze}）——你能掌控环境，但较耗费心力，可在本命吉方设座位蓄能`;
+          else rel = `宅克我（${ze}克${me}）——环境对你有压制，建议在个人吉方（${mg.name}卦吉方）设办公桌/床位，并摆放通关五行物品化解`;
+          L.push(`**${p.label || "成员"}（${p.year}年生，${mg.name}卦，${mg.group}）**`);
+          L.push(`- 宅命关系：${rel}`);
+          L.push(`- 最佳方位：${["生气", "天医", "延年"].map(star => {
+            const d = dirOrder.find(k => ynMap && ynMap[k] === star);
+            return d ? `${KB.dirCenterNames[d]}（${star}）` : "";
+          }).filter(Boolean).join(" / ") || "待补充朝向"}`, "");
+        }
+      }
     }
 
     // ===== 九、科学维度 =====
@@ -277,7 +342,25 @@ const ReportGenerator = (() => {
       }
     }
 
-    // ===== 十一、补充建议 =====
+    // ===== 十一、理想布局方案（总览） =====
+    if (ZG && b.facing) {
+      L.push("---", "", "## 十一、🗺️ 理想布局方案（总览）", "");
+      L.push("若可重新规划布局，八方位最佳用途如下（游年星为长期格局，流年星为当年加减项）：", "");
+      const useByLuck = { "大吉": "主活动区（主桌/主床/主工位）", "吉": "常用功能区（财务/接待/常坐位）", "小吉": "静态储物/靠山位", "凶": "次要用途（茶水/短时停留）", "大凶": "最低频用途并做化解" };
+      L.push("| 方位 | 游年星 | 流年星 | 最佳用途 | 摆放建议 |");
+      L.push("|---|---|---|---|---|");
+      for (const d of dirOrder) {
+        const star = ynMap[d];
+        const sNum = flyMap[d];
+        const ym = KB.youNianMeta[star];
+        const sm = KB.starMeta[sNum];
+        const tag = d === b.facing ? "（大门）" : d === sitKey ? "（坐山）" : "";
+        L.push(`| ${KB.dirCenterNames[d]}${tag} | ${star}（${ym.luck}） | ${KB.starNames[sNum]} | ${useByLuck[ym.luck]} | ${ym.advice}；流年：${sm.advice} |`);
+      }
+      L.push("");
+    }
+
+    // ===== 十二、补充建议 =====
     const missing = [];
     if (!state.photos.some(p => p.cover === "left")) missing.push(["左侧环境（青龙方）", "无法判断左侧环境", "站在大门往左拍一张"]);
     if (!state.photos.some(p => p.cover === "right")) missing.push(["右侧环境（白虎方）", "无法判断右侧环境", "站在大门往右拍一张"]);
@@ -285,23 +368,34 @@ const ReportGenerator = (() => {
     if (!state.photos.some(p => p.cover === "kitchen")) missing.push(["厨房全景", "无法确认灶台方位与门灶关系", "站在厨房门口拍全景"]);
     if (!state.videos.length) missing.push(["环拍视频", "无法交叉验证动态环境", "手持手机环绕房间拍一圈"]);
     if (missing.length) {
-      L.push("---", "", "## 十一、📷 补充建议汇总", "");
+      L.push("---", "", "## 十二、📷 补充建议汇总", "");
       L.push("| 缺失场景 | 当前影响 | 建议补充 |");
       L.push("|---|---|---|");
       for (const m of missing) L.push(`| ${m[0]} | ${m[1]} | ${m[2]} |`);
       L.push("");
     }
 
-    // ===== 十二、30天自检 =====
-    L.push("---", "", "## 十二、✅ 30天自检验证清单", "");
+    // ===== 十三、30天自检（场景化） =====
+    const btObj = KB.buildingTypes.find(x => x.code === b.buildingType);
+    const isOffice = btObj && /办公|商业|商铺/.test(btObj.name);
+    L.push("---", "", "## 十三、✅ 30天自检验证清单", "");
     L.push("| 验证项 | 改善前 | 30天后 | 60天后 |");
     L.push("|---|---|---|---|");
-    L.push("| 睡眠质量 | ①入睡难 ②多梦 ③早醒 ④无不适 | ________ | ________ |");
-    L.push("| 精力状态 | ①常疲倦 ②一般 ③精力充沛 | ________ | ________ |");
-    L.push("| 家庭和谐度 | ①常争吵 ②偶有不和 ③和谐 | ________ | ________ |");
-    L.push("| 事业/学业 | ①不顺 ②平淡 ③顺利 | ________ | ________ |");
-    L.push("| 财运感受 | ①支出多 ②平稳 ③有盈余 | ________ | ________ |");
-    L.push("| 整体舒适感 | ①压抑 ②一般 ③舒适 | ________ | ________ |");
+    if (isOffice) {
+      L.push("| 工作专注度 | ①经常分心 ②偶尔走神 ③专注高效 | ________ | ________ |");
+      L.push("| 财运/业绩 | ①低迷 ②持平 ③上升明显 | ________ | ________ |");
+      L.push("| 人际关系 | ①多是非 ②偶有摩擦 ③和谐顺畅 | ________ | ________ |");
+      L.push("| 决策清晰度 | ①犹豫不决 ②一般 ③果断明确 | ________ | ________ |");
+      L.push("| 团队氛围 | ①摩擦多 ②一般 ③协作顺畅 | ________ | ________ |");
+      L.push("| 整体舒适感 | ①压抑 ②一般 ③舒心高效 | ________ | ________ |");
+    } else {
+      L.push("| 睡眠质量 | ①入睡难 ②多梦 ③早醒 ④无不适 | ________ | ________ |");
+      L.push("| 精力状态 | ①常疲倦 ②一般 ③精力充沛 | ________ | ________ |");
+      L.push("| 家庭和谐度 | ①常争吵 ②偶有不和 ③和谐 | ________ | ________ |");
+      L.push("| 事业/学业 | ①不顺 ②平淡 ③顺利 | ________ | ________ |");
+      L.push("| 财运感受 | ①支出多 ②平稳 ③有盈余 | ________ | ________ |");
+      L.push("| 整体舒适感 | ①压抑 ②一般 ③舒适 | ________ | ________ |");
+    }
     L.push("", "> 💡 调整后给自己30天适应期，60天再来对比感受。风水调整是渐进过程，非一日之功。", "");
 
     // ===== 报告总结 =====
@@ -329,6 +423,7 @@ const ReportGenerator = (() => {
     L.push("> - ⭐为AI/程序推演，⭐⭐为有经典依据但存流派差异，⭐⭐⭐为多源交叉验证。");
     L.push("> - 照片/视频量化分析仅提取亮度、动态、响度等统计特征，不等于专业视觉识别，请以实地勘察为准。");
     L.push("> - 凡涉及地质/结构/消防安全的🔴红色预警，请务必遵从当地专业部门指引。");
+    L.push(`> - 流年飞星为时效性建议，每年变化，以上仅针对${ys}年；八宅游年为长期格局，两者请分别对待。`);
     L.push("> - 本报告仅供参考，重大决策请咨询专业地理师实地勘测。");
 
     return L.join("\n");
