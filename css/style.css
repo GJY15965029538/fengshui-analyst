@@ -113,10 +113,39 @@ td .ev { width: 160px; font-size: 12.5px; padding: 4px 8px; }
 .person-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 10px; align-items: end; }
 .person-row .btn { margin-bottom: 1px; }
 
-/* 报告预览 */
+/* 报告预览（Markdown 渲染后） */
 .report-view { background: #fbfcfe; border: 1px solid var(--line); border-radius: 10px;
-  padding: 22px 24px; max-height: 62vh; overflow: auto; white-space: pre-wrap;
-  font-family: Consolas, "Courier New", monospace; font-size: 13px; line-height: 1.75; }
+  padding: 28px 32px; max-height: 64vh; overflow: auto;
+  font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+  font-size: 14.5px; line-height: 1.8; color: var(--ink); }
+.report-view h1 { font-size: 22px; font-weight: 700; text-align: center;
+  border-bottom: 2.5px solid var(--primary); padding-bottom: 10px; margin: 0 0 18px; }
+.report-view h2 { font-size: 17px; font-weight: 700; color: var(--primary-d);
+  border-left: 4px solid var(--primary); padding-left: 10px; margin: 24px 0 10px; }
+.report-view h3 { font-size: 15px; font-weight: 600; margin: 16px 0 8px; }
+.report-view p { margin: 8px 0; }
+.report-view strong { color: var(--ink); font-weight: 700; }
+.report-view ul.md-ul { list-style: none; padding-left: 6px; margin: 8px 0; }
+.report-view ul.md-ul li { padding: 3px 0 3px 18px; position: relative; }
+.report-view ul.md-ul li::before { content: "▸"; position: absolute; left: 0; color: var(--primary); font-size: 13px; }
+
+/* 报告表格 */
+.report-view table.md-table { border-collapse: collapse; width: 100%; font-size: 13.5px;
+  margin: 10px 0 14px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.report-view table.md-table th { background: #eef3fc; color: #33487a; font-weight: 600;
+  padding: 7px 10px; text-align: left; border-bottom: 2px solid #d0ddef; white-space: nowrap; }
+.report-view table.md-table td { padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.report-view table.md-table tbody tr:nth-child(even) { background: #f6f9fe; }
+.report-view table.md-table tbody tr:hover { background: #eef5ff; }
+
+/* 报告引用块 */
+.report-view blockquote { margin: 10px 0; padding: 8px 14px;
+  border-left: 3.5px solid var(--primary); background: #f0f4ff; border-radius: 0 6px 6px 0;
+  color: #44557a; font-size: 13.5px; }
+
+/* 报告分隔线 */
+.report-view hr.md-hr { border: none; height: 2px; margin: 18px 0;
+  background: linear-gradient(90deg, transparent, var(--line), transparent); }
 
 /* Toast */
 .toast { position: fixed; left: 50%; bottom: 42px; transform: translateX(-50%);
@@ -128,5 +157,8 @@ td .ev { width: 160px; font-size: 12.5px; padding: 4px 8px; }
 @media print {
   body * { visibility: hidden; }
   #reportView, #reportView * { visibility: visible; }
-  #reportView { position: absolute; left: 0; top: 0; width: 100%; max-height: none; border: none; font-size: 12px; }
+  #reportView { position: absolute; left: 0; top: 0; width: 100%; max-height: none;
+    border: none; font-size: 12px; overflow: visible; padding: 0 8px; }
+  .report-view table.md-table tr { page-break-inside: avoid; }
+  .report-view h2 { page-break-after: avoid; }
 }
