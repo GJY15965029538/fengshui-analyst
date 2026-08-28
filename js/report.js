@@ -35,21 +35,73 @@ const ReportGenerator = (() => {
     const b = state.basic;
 
     // ===== 头部 =====
+    const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+    const seq = String(Math.floor(Math.random()*9000)+1000);
     L.push("# 📜 环境综合分析报告", "");
-    L.push(`> 基于您提供的：${state.text ? "文字描述" : "无文字"} + ${state.photos.length}张照片 + ${state.videos.length}段视频`);
-    L.push(`> 分析时间：${now.toLocaleString("zh-CN")}    |    分析方式：本地浏览器离线分析，数据未上传任何服务器`);
+    L.push(`> **报告编号**：FS-${dateStr}-${seq}　|　**版本**：V3.1`);
+    L.push(`> **分析方式**：本地浏览器离线分析，数据未上传任何服务器`);
+    L.push(`> **生成时间**：${now.toLocaleString("zh-CN")}`);
+    L.push(`> **数据来源**：${state.text ? "文字描述" : "无文字"} + ${state.photos.length}张照片 + ${state.videos.length}段视频`);
     const adapt = [];
     if (b.region) adapt.push(b.region);
     if (b.hemisphere === "south") adapt.push("南半球（已应用修正）");
     if (b.hemisphere === "north") adapt.push("北半球");
     if (b.climate) adapt.push(KB.global.climates.find(c => c.key === b.climate)?.name || "");
     if (b.culture) adapt.push(KB.global.cultures.find(c => c.key === b.culture)?.name || "");
-    if (adapt.some(Boolean)) L.push(`> 已自动适配：${adapt.filter(Boolean).join(" / ")}`);
-    if (b.buildingType) { const bt = KB.buildingTypes.find(x => x.code === b.buildingType); if (bt) L.push(`> 建筑类型：${bt.code} ${bt.name}（分析重点：${bt.focus}）`); }
+    if (adapt.some(Boolean)) L.push(`> **已自动适配**：${adapt.filter(Boolean).join(" / ")}`);
+    if (b.buildingType) { const bt = KB.buildingTypes.find(x => x.code === b.buildingType); if (bt) L.push(`> **建筑类型**：${bt.code} ${bt.name}（分析重点：${bt.focus}）`); }
     L.push("", "---", "");
 
-    // ===== 地质红色预警（置顶）=====
+    // ===== 综合环境评级 =====
     const geoOn = ["seismic", "flood", "landslide"].filter(k => state.geo[k]);
+    let score = 100;
+    let redCount = 0, orangeCount = 0, yellowCount = 0, greenCount = 0;
+    for (const f of active) {
+      if (f.positive) { score += 5; continue; }
+      if (f.risk === 3) { score -= 30; redCount++; }
+      else if (f.risk === 2) { score -= 15; orangeCount++; }
+      else if (f.risk === 1) { score -= 5; yellowCount++; }
+      else { greenCount++; }
+    }
+    const posCount = active.filter(f => f.positive).length;
+    score = Math.min(score, 120);
+    score = Math.max(score, 0);
+    if (geoOn.length) score -= 10;
+    let grade, gradeDesc;
+    if (score >= 85) { grade = "A级"; gradeDesc = "优秀：环境格局良好，仅有少量可优化项"; }
+    else if (score >= 70) { grade = "B级"; gradeDesc = "良好：存在部分需注意的形煞或布局问题"; }
+    else if (score >= 50) { grade = "C级"; gradeDesc = "需改善：有多项需处理的风险因素"; }
+    else { grade = "D级"; gradeDesc = "需重视：存在红色预警或多项高风险项"; }
+    L.push("## 📊 综合环境评级", "");
+    L.push(`> **${grade}**　综合评分：${score}/100　${gradeDesc}`);
+    L.push("");
+    L.push("| 评级 | 含义 | 说明 |");
+    L.push("|---|---|---|");
+    L.push("| A级 | 优秀 | 环境格局良好，仅有少量可优化项 |");
+    L.push("| B级 | 良好 | 存在部分需注意的形煞或布局问题 |");
+    L.push("| C级 | 需改善 | 有多项需处理的风险因素 |");
+    L.push("| D级 | 需重视 | 存在红色预警或多项高风险项 |");
+    L.push("", "**评分构成**：基础100分 + 风险扣分（🔴-30/🟠-15/🟡-5/🟢0）+ 优势加分（每项吉象+5，上限+20）", "");
+    L.push("---", "");
+
+    // ===== 环境优势项汇总 =====
+    const positives = active.filter(f => f.positive);
+    if (positives.length) {
+      L.push("## 🟢 环境优势项汇总", "");
+      L.push("| 序号 | 优势项 | 来源 | 说明 | 典籍依据 |");
+      L.push("|---|---|---|---|---|");
+      let pi = 0;
+      for (const f of positives) {
+        pi++;
+        const src = f.sources.text.state === "yes" ? "文字" : f.sources.photo.state === "yes" ? "照片" : "视频";
+        const q = quoteOf(f);
+        L.push(`| ${pi} | ${f.name} | ${src} | ${f.note || ""} | ${q ? `《${q[0]}》` : "—"} |`);
+      }
+      L.push("");
+      L.push("---", "");
+    }
+
+    // ===== 地质红色预警（置顶）=====
     if (geoOn.length) {
       const names = { seismic: "地震带", flood: "洪水/海啸", landslide: "滑坡/软土地基" };
       L.push("> ## 🔴 红色预警（最高优先级）", ">");
@@ -71,6 +123,7 @@ const ReportGenerator = (() => {
     }
     if (!active.length) L.push("| （暂无有效结论） | — | — | — | — | — |");
     L.push("", "**图例**：✅有明确证据　⚠️部分证据/矛盾　❌证据缺失　—未涉及", "");
+    L.push("**置信度图例**：⭐⭐⭐高（三方一致/经典共识）　⭐⭐中（两方一致/经典依据）　⭐低（单方信息/AI推测）", "");
 
     // ===== 需确认/补充事项 =====
     if (conflicts.length || active.some(f => f.judgement.stars < 3)) {
@@ -216,7 +269,8 @@ const ReportGenerator = (() => {
         L.push(`- 证据支撑：文字${sym(f.sources.text.state)} + 照片${sym(f.sources.photo.state)} + 视频${sym(f.sources.video.state)}（${f.judgement.conclusion}，${CrossValidator.starsLabel(f.judgement.stars)}）`);
         L.push(`- 通俗解释：${f.note || ""}${f.note ? "。" : ""}${f.name}是传统风水中的典型格局，建议按下方方案视情况处理。`);
         const planTag = ["A方案-最佳", "B方案-替代", "C方案-过渡"];
-        r.plans.forEach((p, idx) => L.push(`- 【${planTag[idx]}】${p[0]}：${p[1]}，预估成本${p[2]}，工期${p[3]}`));
+        const effects = ["从根本上化解形煞不利影响", "有效缓解对冲格局，改善居住舒适度", "低成本过渡，心理层面缓冲"];
+        r.plans.forEach((p, idx) => L.push(`- **【${planTag[idx]}】**${p[0]}：${p[1]}，预估成本${p[2]}，工期${p[3]}，预期${effects[idx] || "逐步改善"}`));
         const q = r.quote;
         if (q) L.push(`- 📖 引用自《${q[0]}》：“${q[1]}”${classicExplain(q)}`);
         L.push("");
@@ -240,12 +294,34 @@ const ReportGenerator = (() => {
 
     // ===== 十二、30天自检 =====
     L.push("---", "", "## 十二、✅ 30天自检验证清单", "");
-    L.push("| 验证项 | 改善前 | 30天后 |");
-    L.push("|---|---|---|");
-    L.push("| 睡眠质量 | ①入睡难 ②多梦 ③早醒 ④无不适 | ________ |");
-    L.push("| 家庭和谐度 | ①常争吵 ②偶有不和 ③和谐 | ________ |");
-    L.push("| 整体舒适感 | ①压抑 ②一般 ③舒适 | ________ |");
-    L.push("", "> 💡 调整后给自己30天适应期，再来对比感受。", "");
+    L.push("| 验证项 | 改善前 | 30天后 | 60天后 |");
+    L.push("|---|---|---|---|");
+    L.push("| 睡眠质量 | ①入睡难 ②多梦 ③早醒 ④无不适 | ________ | ________ |");
+    L.push("| 精力状态 | ①常疲倦 ②一般 ③精力充沛 | ________ | ________ |");
+    L.push("| 家庭和谐度 | ①常争吵 ②偶有不和 ③和谐 | ________ | ________ |");
+    L.push("| 事业/学业 | ①不顺 ②平淡 ③顺利 | ________ | ________ |");
+    L.push("| 财运感受 | ①支出多 ②平稳 ③有盈余 | ________ | ________ |");
+    L.push("| 整体舒适感 | ①压抑 ②一般 ③舒适 | ________ | ________ |");
+    L.push("", "> 💡 调整后给自己30天适应期，60天再来对比感受。风水调整是渐进过程，非一日之功。", "");
+
+    // ===== 报告总结 =====
+    const totalIssues = redCount + orangeCount + yellowCount + greenCount;
+    const topIssue = actionable.length ? actionable.sort((a, b) => b.risk - a.risk)[0].name : "无";
+    L.push("---", "", "## 📝 报告总结", "");
+    L.push(`> 综合以上 ${active.length} 项分析，您的环境存在 **${totalIssues}项需关注问题**（其中🔴红色预警 ${redCount}项、🟠较高 ${orangeCount}项、🟡一般 ${yellowCount}项）${posCount ? `和 **${posCount}项环境优势**` : "，暂未发现明显环境优势"}。`);
+    L.push(">");
+    L.push(`> 综合评级：**${grade}（${score}/100）**。`);
+    L.push(">");
+    if (redCount > 0) {
+      L.push(`> 建议优先处理红色预警项，其余可按优先级逐步调整。每项行动清单均提供A/B/C三套方案，可根据预算和工期灵活选择。`);
+    } else if (actionable.length) {
+      L.push(`> 建议优先处理「${topIssue}」，其余可按优先级逐步调整。每项行动清单均提供A/B/C三套方案，可根据预算和工期灵活选择。`);
+    } else {
+      L.push(`> 当前环境格局良好，暂无紧急需处理的问题。可关注日常优化项，保持良好的居住习惯。`);
+    }
+    L.push(">");
+    L.push("> 风水之道，贵在顺势而为、循序渐进。调整后保持30-60天观察期，再评估效果。");
+    L.push("");
 
     // ===== 免责声明 =====
     L.push("---", "", "> 📌 **免责声明**：", ">");
