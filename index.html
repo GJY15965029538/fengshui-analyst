@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>风水智囊 · AI地理师 — 本地离线分析</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">🌍 风水智囊 · AI地理师</div>
+  <div class="sub">文字 · 照片 · 视频 三方交叉验证 — 全程本地离线运行，文件不上传任何服务器</div>
+</header>
+
+<main class="wrap">
+  <!-- 步骤指示 -->
+  <nav class="steps" id="stepsBar">
+    <div class="step active" data-step="1"><span class="no">1</span>上传材料</div>
+    <div class="step" data-step="2"><span class="no">2</span>基本信息</div>
+    <div class="step" data-step="3"><span class="no">3</span>交叉确认</div>
+    <div class="step" data-step="4"><span class="no">4</span>生成报告</div>
+  </nav>
+
+  <!-- ============ 步骤1 ============ -->
+  <section class="card" id="step1">
+    <h2>📝 环境描述（越口语越好）</h2>
+    <textarea id="textInput" rows="5" placeholder="例：我家在澳大利亚悉尼，大门朝北，自建房三层，窗外有条弯弯的河，门口正对一条直路，床头上面有横梁…"></textarea>
+    <div class="row gap">
+      <button class="btn ghost" id="btnSample">填入示例</button>
+      <button class="btn ghost" id="btnClearText">清空</button>
+      <span class="hint" id="textHint">支持自动识别：朝向、出生年份、入住年份、半球</span>
+    </div>
+
+    <h2>📷 照片上传 <small>（外景/室内/户型图，可多选）</small></h2>
+    <div class="dropzone" id="photoZone">
+      <input type="file" id="photoInput" accept="image/*" multiple hidden>
+      <p>将照片拖拽到此处，或 <button class="btn small" id="photoPick">选择文件</button></p>
+      <p class="hint">照片将在本地提取亮度/色调/画面密度等统计特征，用于采光与噪声的量化评估</p>
+    </div>
+    <div class="thumbs" id="photoThumbs"></div>
+
+    <h2>🎥 视频上传 <small>（环绕拍一圈最佳，可多选）</small></h2>
+    <div class="dropzone" id="videoZone">
+      <input type="file" id="videoInput" accept="video/*" multiple hidden>
+      <p>将视频拖拽到此处，或 <button class="btn small" id="videoPick">选择文件</button></p>
+      <p class="hint">视频将在本地抽帧分析动态强度，并提取音频响度评估噪声，仅提取统计特征</p>
+    </div>
+    <div class="thumbs" id="videoThumbs"></div>
+
+    <div class="row end">
+      <button class="btn primary" id="toStep2">下一步：基本信息 →</button>
+    </div>
+  </section>
+
+  <!-- ============ 步骤2 ============ -->
+  <section class="card hidden" id="step2">
+    <h2>🌍 地域与适配</h2>
+    <div class="grid3">
+      <label>国家/城市<input id="fRegion" placeholder="如：中国杭州 / 澳大利亚悉尼"></label>
+      <label>半球
+        <select id="fHemi"><option value="">自动识别</option><option value="north">北半球</option><option value="south">南半球（自动反转坐向/飞星）</option></select>
+      </label>
+      <label>气候类型
+        <select id="fClimate"><option value="">未选择</option></select>
+      </label>
+      <label>文化模式
+        <select id="fCulture"><option value="">自动（默认中性）</option></select>
+      </label>
+    </div>
+
+    <h2>🏠 建筑信息</h2>
+    <div class="grid3">
+      <label>建筑类型
+        <select id="fBuilding"><option value="">未选择</option></select>
+      </label>
+      <label>大门/阳台朝向
+        <select id="fFacing"><option value="">未提供（跳过理气排盘）</option></select>
+      </label>
+      <label>楼层<input id="fFloor" type="number" min="1" placeholder="如 6"></label>
+      <label>建造年份<input id="fBuildYear" type="number" min="1900" max="2026" placeholder="如 2015"></label>
+      <label>入住年份<input id="fMoveYear" type="number" min="1950" max="2026" placeholder="如 2023"></label>
+    </div>
+
+    <h2>👤 居住者（用于八宅配命，可留空）</h2>
+    <div id="peopleList"></div>
+    <button class="btn ghost" id="btnAddPerson">+ 添加成员</button>
+
+    <h2>🔴 地质安全自检 <small>（勾选后将以红色预警置顶）</small></h2>
+    <div class="geo-box">
+      <label class="check"><input type="checkbox" id="geoSeismic"> 位于地震带或高烈度区</label>
+      <label class="check"><input type="checkbox" id="geoFlood"> 位于洪水/海啸风险区</label>
+      <label class="check"><input type="checkbox" id="geoLand"> 位于滑坡区/填海区/软土地基</label>
+      <details><summary>常见高风险区域参考</summary><div id="geoRef" class="hint"></div></details>
+    </div>
+
+    <div class="row between">
+      <button class="btn" id="back1">← 上一步</button>
+      <button class="btn primary" id="toStep3">开始本地分析 →</button>
+    </div>
+  </section>
+
+  <!-- ============ 步骤3 ============ -->
+  <section class="card hidden" id="step3">
+    <div id="mediaProgress" class="progress-box hidden">
+      <p id="mediaProgressText">正在本地分析媒体文件…</p>
+      <div class="progress"><div id="mediaProgressBar"></div></div>
+    </div>
+
+    <div id="mediaStats" class="stats-grid"></div>
+
+    <h2>🔗 发现清单 · 三源交叉确认</h2>
+    <p class="hint">程序已按 105 条术语库匹配文字描述，并对照片/视频做了量化分析。请逐项确认该现象在照片/视频中是否可见——✅有证据 / ❌未见 / ⚠️与描述矛盾 / —未涉及。三源一致置信度最高。</p>
+    <div class="table-box"><table id="findTable"></table></div>
+    <div class="row gap">
+      <select id="addFindingSelect"></select>
+      <button class="btn ghost" id="btnAddFinding">+ 手动补充发现</button>
+    </div>
+
+    <div class="row between">
+      <button class="btn" id="back2">← 上一步</button>
+      <button class="btn primary" id="toStep4">生成交叉验证报告 →</button>
+    </div>
+  </section>
+
+  <!-- ============ 步骤4 ============ -->
+  <section class="card hidden" id="step4">
+    <h2>📜 环境综合分析报告</h2>
+    <div class="row gap">
+      <button class="btn primary" id="btnDownload">⬇️ 下载 Markdown 报告</button>
+      <button class="btn" id="btnPrint">🖨️ 打印 / 存为 PDF</button>
+      <button class="btn ghost" id="btnCopy">复制全文</button>
+      <span class="hint" id="reportHint"></span>
+    </div>
+    <pre id="reportView" class="report-view"></pre>
+    <div class="row between">
+      <button class="btn" id="back3">← 上一步</button>
+      <button class="btn ghost" id="btnRestart">🔄 重新开始新分析</button>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  本工具为传统文化参考，全部计算在您的浏览器内完成 · 不收集不上传任何数据 · 地质/结构/消防安全请遵从当地专业部门指引
+</footer>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="js/knowledge.js"></script>
+<script src="js/kb-extend.js"></script>
+<script src="js/text-analyzer.js"></script>
+<script src="js/media-analyzer.js"></script>
+<script src="js/validator.js"></script>
+<script src="js/report.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
