@@ -88,3 +88,67 @@ KB.facingToSit = { "north": "south", "south": "north", "east": "west", "west": "
 KB.sitToGua = { "north": 1, "south": 9, "east": 3, "southeast": 4, "west": 7, "northwest": 6, "northeast": 8, "southwest": 2 };
 
 KB.starNames = { 1: "一白贪狼", 2: "二黑巨门", 3: "三碧禄存", 4: "四绿文曲", 5: "五黄廉贞", 6: "六白武曲", 7: "七赤破军", 8: "八白左辅", 9: "九紫右弼" };
+
+// ===== 八宅游年数据（游年歌：自本卦起，按乾坎艮震巽离坤兑顺布） =====
+KB.youNianSong = {
+  "乾": "乾六天五祸绝延生", "坎": "坎五天生延绝祸六", "艮": "艮六绝祸生延天五",
+  "震": "震延生祸绝五天六", "巽": "巽天五六祸生绝延", "离": "离六五绝延祸生天",
+  "坤": "坤天延绝生祸五六", "兑": "兑生祸延绝六五天"
+};
+KB.youNianStars = { "生": "生气", "天": "天医", "延": "延年", "伏": "伏位", "祸": "祸害", "六": "六煞", "五": "五鬼", "绝": "绝命" };
+KB.guaOrder = ["乾", "坎", "艮", "震", "巽", "离", "坤", "兑"];
+KB.guaToDir = { "乾": "northwest", "坎": "north", "艮": "northeast", "震": "east", "巽": "southeast", "离": "south", "坤": "southwest", "兑": "west" };
+// 游年星属性与布局建议
+KB.youNianMeta = {
+  "生气": { luck: "大吉", advice: "最佳财位、事业位，宜设老板桌/主工位", quote: ["八宅明镜", "生气者，福德之方，主旺财丁"] },
+  "天医": { luck: "吉", advice: "宜设财务、行政，主健康贵人", quote: ["八宅明镜", "天医者，主健康长寿，贵人扶助"] },
+  "延年": { luck: "吉", advice: "主事业顺遂、人际和谐，宜设大门/接待", quote: ["八宅明镜", "延年主寿考，亦主官贵妻财"] },
+  "伏位": { luck: "小吉", advice: "宜设文件柜、储物、靠山位，主稳定积蓄", quote: ["八宅明镜", "伏位者，辅弼星也，主安福稳实"] },
+  "祸害": { luck: "凶", advice: "不宜设主座位，易犯口舌小人", quote: ["八宅明镜", "祸害主口舌是非、小人暗算"] },
+  "六煞": { luck: "凶", advice: "不宜设重要岗位，易犯桃花是非", quote: ["八宅明镜", "六煞主口舌纠纷、桃色之扰"] },
+  "五鬼": { luck: "凶", advice: "不宜久坐，易招是非、火灾风险", quote: ["八宅明镜", "五鬼主口舌官非、火灾横祸"] },
+  "绝命": { luck: "大凶", advice: "最凶方位，不宜设主座位，易招灾祸破财", quote: ["八宅明镜", "绝命最凶，主死亡绝嗣、破财官非"] }
+};
+// 八卦五行与命宅生克解读
+KB.guaElement = { "坎": "水", "坤": "土", "震": "木", "巽": "木", "乾": "金", "兑": "金", "艮": "土", "离": "火" };
+// 方位 → 山向名（八方位中针）
+KB.dirShan = { "north": "子", "south": "午", "east": "卯", "west": "酉", "southeast": "巽", "northeast": "艮", "southwest": "坤", "northwest": "乾" };
+
+// ===== 流年飞星数据 =====
+KB.starMeta = {
+  1: { nature: "吉星", effect: "官贵、人缘、事业", advice: "可设接待区、洽谈位" },
+  2: { nature: "凶星", effect: "疾病、是非", advice: "放铜葫芦化解，保持整洁" },
+  3: { nature: "凶星", effect: "是非、官非、小人", advice: "放红色地垫/红绳化解（火泄木）" },
+  4: { nature: "吉星", effect: "文昌、创意、名气", advice: "宜设书房、创意工位，放文昌塔" },
+  5: { nature: "大凶", effect: "灾祸、意外、重病", advice: "宜静不宜动，挂铜铃/五帝钱（金泄土），忌红色黄色物品" },
+  6: { nature: "吉星", effect: "偏财、武贵、贵人", advice: "宜放保险柜、重要资料" },
+  7: { nature: "凶星", effect: "口舌、盗贼、损伤", advice: "放蓝色地毯或黑曜石（水泄金）" },
+  8: { nature: "大吉", effect: "正财、置业、升迁", advice: "可放聚宝盆、发财树催财" },
+  9: { nature: "吉星", effect: "喜庆、桃花、名声", advice: "宜做接待、洽谈区" }
+};
+// 洛书飞泊路径：中宫→乾→兑→艮→离→坎→坤→震→巽
+KB.luoShuPath = ["center", "northwest", "west", "northeast", "south", "north", "southwest", "east", "southeast"];
+KB.dirCenterNames = { "north": "正北", "south": "正南", "east": "正东", "west": "正西", "southeast": "东南", "northwest": "西北", "northeast": "东北", "southwest": "西南", "center": "中宫" };
+
+// 由宅卦名计算八方位游年星：返回 { dirKey: starName }
+// 规则：游年歌自本卦起读，首字为本卦（伏位），其后七卦按 乾坎艮震巽离坤兑 循环顺序从本卦之后轮转
+KB.youNianMap = function (zhaiName) {
+  const song = KB.youNianSong[zhaiName];
+  const idx = KB.guaOrder.indexOf(zhaiName);
+  const seq = [zhaiName];
+  for (let i = 1; i < 8; i++) seq.push(KB.guaOrder[(idx + i) % 8]);
+  const map = {};
+  for (let i = 0; i < 8; i++) {
+    map[KB.guaToDir[seq[i]]] = i === 0 ? "伏位" : KB.youNianStars[song[i]];
+  }
+  return map;
+};
+
+// 流年飞星九宫：返回 { dirKey(含center): 星数 }（顺飞：中宫=入中星，沿洛书路径逐宫+1）
+KB.yearlyFlying = function (year, baseStar) {
+  const map = {};
+  for (let i = 0; i < 9; i++) {
+    map[KB.luoShuPath[i]] = ((baseStar - 1 + i) % 9) + 1;
+  }
+  return map;
+};
