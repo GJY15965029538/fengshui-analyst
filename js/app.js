@@ -416,7 +416,7 @@ const App = (() => {
       metaRegion: state.metaRegion
     });
     state.reportMD = md;
-    $("reportView").textContent = md;
+    $("reportView").innerHTML = MDRenderer.render(md);
     const n = state.findings.filter(f => !f.judgement.excluded).length;
     $("reportHint").textContent = `共输出 ${n} 项有效结论（已按证据链矩阵判定置信度）`;
     showStep(4);
